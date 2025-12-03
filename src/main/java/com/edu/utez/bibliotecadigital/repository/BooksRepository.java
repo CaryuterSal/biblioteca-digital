@@ -1,4 +1,8 @@
 package com.edu.utez.bibliotecadigital.repository;
 
-public interface BooksRepository {
+import com.edu.utez.bibliotecadigital.model.Book;
+
+import java.util.UUID;
+
+public interface BooksRepository extends CrudRepository<Book, UUID> {
 }
