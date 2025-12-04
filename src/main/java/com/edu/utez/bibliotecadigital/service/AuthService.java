@@ -27,8 +27,10 @@ public class AuthService {
     private final UserDetailsService userDetailsService;
 
     public TokenResponse register(UserRegisterRequest request) {
-        User u = new User(UUID.randomUUID());
-        u.setPassword(passwordEncoder.encode(request.password()));
+        User u = new User(
+                UUID.randomUUID(),
+                request.username(),
+                passwordEncoder.encode(request.password()));
         String token = jwtService.generateToken(userRepository.save(u).getUsername());
         return new TokenResponse(new UserResponse(u.getId(), u.getUsername()),token);
     }
@@ -40,6 +42,6 @@ public class AuthService {
 
         User userDetails =(User) userDetailsService.loadUserByUsername(request.username());
         String jwt = jwtService.generateToken(userDetails.getUsername());
-        return new TokenResponse(new UserResponse(userDetails.getId(), userDetails.getUsername()),jwt);;
+        return new TokenResponse(new UserResponse(userDetails.getId(), userDetails.getUsername()),jwt);
     }
 }

@@ -3,7 +3,6 @@ package com.edu.utez.bibliotecadigital.controller;
 import com.edu.utez.bibliotecadigital.controller.dto.LoginRequest;
 import com.edu.utez.bibliotecadigital.controller.dto.TokenResponse;
 import com.edu.utez.bibliotecadigital.controller.dto.UserRegisterRequest;
-import com.edu.utez.bibliotecadigital.model.Loan;
 import com.edu.utez.bibliotecadigital.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.NonNull;
@@ -14,8 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBuilder;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 

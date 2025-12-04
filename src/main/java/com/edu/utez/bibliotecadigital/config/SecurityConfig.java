@@ -33,7 +33,7 @@ public class SecurityConfig {
             cors(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth ->
-                            auth.requestMatchers("/auth/**").permitAll()
+                            auth.requestMatchers("/auth/**", "/swagger-ui/**","/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs").permitAll()
                                     .requestMatchers("/**").authenticated()
                     )
                 .addFilterAfter(jwtFilter, UsernamePasswordAuthenticationFilter.class)
