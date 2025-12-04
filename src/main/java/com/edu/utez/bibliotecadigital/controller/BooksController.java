@@ -3,8 +3,10 @@ package com.edu.utez.bibliotecadigital.controller;
 import com.edu.utez.bibliotecadigital.controller.dto.BookRegisterRequest;
 import com.edu.utez.bibliotecadigital.controller.dto.BookStatusUpdateRequest;
 import com.edu.utez.bibliotecadigital.model.Book;
+import com.edu.utez.bibliotecadigital.service.BooksRegistryService;
 import jakarta.validation.Valid;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,7 +15,11 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/books")
+@RequiredArgsConstructor
 public class BooksController {
+
+    private final BooksRegistryService booksRegistryService;
+
 
     @PostMapping
     public ResponseEntity<@NonNull Book> addBook(@Valid @RequestBody BookRegisterRequest dto){

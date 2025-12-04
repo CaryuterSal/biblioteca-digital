@@ -2,6 +2,7 @@ package com.edu.utez.bibliotecadigital.service;
 
 import com.edu.utez.bibliotecadigital.controller.dto.*;
 import com.edu.utez.bibliotecadigital.infrastructure.datastructures.ArrayStack;
+import com.edu.utez.bibliotecadigital.infrastructure.datastructures.Queue;
 import com.edu.utez.bibliotecadigital.infrastructure.datastructures.Stack;
 import com.edu.utez.bibliotecadigital.model.*;
 import com.edu.utez.bibliotecadigital.repository.ActionsHistoryRepository;
@@ -81,11 +82,31 @@ public class BooksLoanService {
         while(!loans.isEmpty()){
             LoanStatus topLoan =  loans.pop();
             if(topLoan.getBook().getId().equals(book.getId())){
-                book.incrementStock();
-                booksRepository.save(book);
 
                 LoanStatus returnLoanStatus = topLoan.returnLoan();
                 actionsHistoryRepository.save(returnLoanStatus);
+
+                Queue<LoanStatus> pending = pendingLoansRepository.findPendingLoansForBook(book.getId());
+
+                if (!pending.isEmpty()) {
+                    LoanStatus waiting = pending.dequeue();
+                    pendingLoansRepository.delete(waiting);
+
+                    LoanStatus newLoan = LoanStatus.createGranted(
+                            UUID.randomUUID(),
+                            waiting.getUser(),
+                            book,
+                            waiting.getExpectedLoanPeriod()
+                    );
+
+                    actionsHistoryRepository.save(newLoan);
+
+                    return Optional.of(returnLoanStatus);
+                }
+
+                 book.incrementStock();
+                booksRepository.save(book);
+
                 return Optional.of(returnLoanStatus);
             }
         }

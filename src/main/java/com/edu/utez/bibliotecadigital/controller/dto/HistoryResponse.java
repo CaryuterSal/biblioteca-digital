@@ -7,6 +7,3 @@ import java.util.List;
 public record HistoryResponse(UserResponse subject, List<HistoryItemResponse> items) {
 }
 
-record HistoryItemResponse(Book book, HistoryAction action){
-
-}

@@ -75,6 +75,27 @@ public class ArrayQueuePendingLoansRepository implements PendingLoansRepository 
     }
 
     @Override
+    public Queue<LoanStatus> findPendingLoansForBook(UUID bookId) {
+        Queue<LoanStatus> resultQueue = queueProvider.getObject();
+        Queue<LoanStatus> tempQueue = queueProvider.getObject();
+
+        while (!pendingLoans.isEmpty()) {
+            LoanStatus top = pendingLoans.dequeue();
+            tempQueue.enqueue(top);
+
+            if (top.getBook().getId().equals(bookId)) {
+                resultQueue.enqueue(top);
+            }
+        }
+
+        while (!tempQueue.isEmpty()) {
+            pendingLoans.enqueue(tempQueue.dequeue());
+        }
+
+        return resultQueue;
+    }
+
+    @Override
     public LoanStatus save(LoanStatus entity) {
         pendingLoans.enqueue(entity);
         return entity;

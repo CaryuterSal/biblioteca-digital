@@ -1,6 +1,5 @@
 package com.edu.utez.bibliotecadigital.repository;
 
-import com.edu.utez.bibliotecadigital.controller.dto.HistoryAction;
 import com.edu.utez.bibliotecadigital.infrastructure.datastructures.ArrayStack;
 import com.edu.utez.bibliotecadigital.infrastructure.datastructures.SinglyLinkedList;
 import com.edu.utez.bibliotecadigital.infrastructure.datastructures.Stack;
@@ -11,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
