@@ -1,16 +1,14 @@
 package com.edu.utez.bibliotecadigital.service;
 
 import com.edu.utez.bibliotecadigital.controller.dto.BookRegisterRequest;
+import com.edu.utez.bibliotecadigital.infrastructure.datastructures.SinglyLinkedList;
 import com.edu.utez.bibliotecadigital.infrastructure.exceptions.NotFoundException;
 import com.edu.utez.bibliotecadigital.model.Book;
 import com.edu.utez.bibliotecadigital.repository.BooksRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -19,13 +17,24 @@ public class BooksRegistryService {
     private final BooksRepository booksRepository;
 
     public List<Book> findAll(){
-        return booksRepository.findAll();
+        List<Book> response = new ArrayList<>();
+        SinglyLinkedList<Book> books = booksRepository.findAll();
+        for(int i = 0; i < books.size(); i++){
+            response.add(books.get(i));
+        }
+        return response;
     }
 
     public List<Book> findActive(){
-        return booksRepository.findAll().stream()
-                .filter(book -> !book.isDeleted())
-                .toList();
+        List<Book> response = new ArrayList<>();
+        SinglyLinkedList<Book> books = booksRepository.findAll();
+        for(int i = 0; i < books.size(); i++){
+            Book book = books.get(i);
+            if(!book.isDeleted()){
+                response.add(books.get(i));
+            }
+        }
+        return response;
     }
 
     public Book findById(UUID id){
@@ -47,6 +56,31 @@ public class BooksRegistryService {
     }
 
     public void deleteById(UUID id){
-        booksRepository.deleteById(id);
+        Book book = findById(id);
+        if(!book.isDeleted()){
+            book.setDeleted(true);
+            booksRepository.save(book);
+        }
+    }
+
+    public List<Book> searchByTitle(String title){
+        List<Book> response = new ArrayList<>();
+        SinglyLinkedList<Book> books = booksRepository.findByTitle(title);
+
+        for(int i = 0; i < books.size(); i++){
+            response.add(books.get(i));
+        }
+
+        return response;
+    }
+
+    public Book updateStatus(UUID id){
+        Book book = findById(id);
+        if(book.isDeleted()){
+            book.setDeleted(false);
+        } else  {
+            book.setDeleted(true);
+        }
+        return booksRepository.save(book);
     }
 }

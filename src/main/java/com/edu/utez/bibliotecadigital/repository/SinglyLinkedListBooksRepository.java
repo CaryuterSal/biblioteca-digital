@@ -23,9 +23,15 @@ public class SinglyLinkedListBooksRepository implements BooksRepository{
 
     @Override
     public Book save(Book entity) {
-        booksRegistry.addLast(entity);
+        findById(entity.getId()).ifPresentOrElse(
+                book -> {
+                            delete(book);
+                            booksRegistry.addLast(entity);
+                        },
+                () -> booksRegistry.addLast(entity));
         return entity;
     }
+
 
     @Override
     public Optional<Book> findById(UUID uuid) {
@@ -72,13 +78,15 @@ public class SinglyLinkedListBooksRepository implements BooksRepository{
     }
 
     @Override
-    public Optional<Book> findByTitle(String title) {
+    public SinglyLinkedList<Book> findByTitle(String title) {
+        SinglyLinkedList<Book> found = listProvider.getObject();
+
         for (int i = 0; i < booksRegistry.size(); i++) {
             Book book = booksRegistry.get(i);
             if (book.getTitle().equalsIgnoreCase(title)) {
-                return Optional.of(book);
+                found.addLast(book);
             }
         }
-        return Optional.empty();
+        return found;
     }
 }

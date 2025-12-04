@@ -34,7 +34,12 @@ public class SinglyLinkedListUsersRepository implements UsersRepository{
 
     @Override
     public User save(User entity) {
-        usersRegistry.addLast(entity);
+        findById(entity.getId()).ifPresentOrElse(
+                user -> {
+                    delete(user);
+                    usersRegistry.addLast(entity);
+                },
+                () -> usersRegistry.addLast(entity));
         return entity;
     }
 

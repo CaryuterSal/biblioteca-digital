@@ -8,10 +8,14 @@ import com.edu.utez.bibliotecadigital.repository.ActionsHistoryRepository;
 import com.edu.utez.bibliotecadigital.repository.BooksRepository;
 import com.edu.utez.bibliotecadigital.repository.PendingLoansRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.Period;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -69,13 +73,40 @@ public class BooksLoanService {
         }
     }
 
-    public LoanStatus returnLoaned(LoanReturnRequest request){
+    public Optional<LoanStatus> returnLoaned(LoanReturnRequest request){
         User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Book book = booksService.findById(request.bookId());
-        Stack<LoanStatus> loan = actionsHistoryRepository.findForUser(currentUser.getId());
+        Stack<LoanStatus> loans = actionsHistoryRepository.findActiveLoansForUser(currentUser.getId());
 
+        while(!loans.isEmpty()){
+            LoanStatus topLoan =  loans.pop();
+            if(topLoan.getBook().getId().equals(book.getId())){
+                book.incrementStock();
+                booksRepository.save(book);
 
+                LoanStatus returnLoanStatus = topLoan.returnLoan();
+                actionsHistoryRepository.save(returnLoanStatus);
+                return Optional.of(returnLoanStatus);
+            }
+        }
+
+        return Optional.empty();
     }
 
+    public List<LoanStatus> findLoansForUser(UUID userId){
+        boolean isAdmin =  SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if(!(isAdmin || currentUser.getId().equals(userId))) throw new AuthorizationDeniedException("Cannot query loans for external users");
 
+        List<LoanStatus> response = new ArrayList<>();
+        Stack<LoanStatus> loans = actionsHistoryRepository.findActiveLoansForUser(userId);
+
+        while(!loans.isEmpty()){
+            response.add(loans.pop());
+        }
+
+        return response;
+    }
 }
