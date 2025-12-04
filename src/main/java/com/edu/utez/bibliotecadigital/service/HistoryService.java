@@ -2,10 +2,13 @@ package com.edu.utez.bibliotecadigital.service;
 
 import com.edu.utez.bibliotecadigital.controller.dto.HistoryItemResponse;
 import com.edu.utez.bibliotecadigital.controller.dto.HistoryResponse;
+import com.edu.utez.bibliotecadigital.controller.dto.HistoryUndoRequest;
 import com.edu.utez.bibliotecadigital.controller.dto.UserResponse;
 import com.edu.utez.bibliotecadigital.infrastructure.datastructures.SinglyLinkedList;
 import com.edu.utez.bibliotecadigital.infrastructure.datastructures.Stack;
+import com.edu.utez.bibliotecadigital.infrastructure.exceptions.NotFoundException;
 import com.edu.utez.bibliotecadigital.model.LoanStatus;
+import com.edu.utez.bibliotecadigital.model.TypeAction;
 import com.edu.utez.bibliotecadigital.model.User;
 import com.edu.utez.bibliotecadigital.repository.ActionsHistoryRepository;
 import lombok.NonNull;
@@ -83,5 +86,49 @@ public class HistoryService {
                         ls -> new HistoryItemResponse(ls.getBook(), ls.getTypeAction())
                 ).toList()
         );
+    }
+
+    public List<HistoryItemResponse> undoAction(HistoryUndoRequest request){
+        boolean isAdmin =  SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        int steps = request.steps().orElse(1);
+        List<LoanStatus> undone = new ArrayList<>();
+
+        if (isAdmin) {
+            for (int i = 0; i < steps; i++) {
+                Optional<LoanStatus> removed;
+
+                if (request.action().isPresent()) {
+                   removed = repository.popByAction(request.action().get());
+                } else {
+                    removed = repository.pop();
+                }
+
+                if (removed.isEmpty()) break;
+                undone.add(removed.get());
+            }
+        } else {
+            for (int i = 0; i < steps; i++) {
+                Optional<LoanStatus> removed;
+
+                if (request.action().isPresent()) {
+                    removed = repository.popForUserByAction(currentUser.getId(), request.action().get());
+                } else {
+                    removed = repository.pop();
+                }
+
+                if (removed.isEmpty()) break;
+                undone.add(removed.get());
+            }
+        }
+
+        return undone.stream()
+                .map(hit -> new HistoryItemResponse(
+                    hit.getBook(),
+                    hit.getTypeAction())
+                )
+                .toList();
     }
 }

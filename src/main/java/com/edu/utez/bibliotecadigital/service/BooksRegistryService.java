@@ -42,17 +42,17 @@ public class BooksRegistryService {
                 .orElseThrow(() -> new NotFoundException(Book.class, id));
     }
 
-    public void updateById(UUID id, BookRegisterRequest request){
+    public Book updateById(UUID id, BookRegisterRequest request){
         Book oldBook = findById(id);
         oldBook.setTitle(request.title());
         oldBook.setAuthor(request.author());
         oldBook.setAvailableCopies(request.availableCopies());
-        booksRepository.save(oldBook);
+        return booksRepository.save(oldBook);
     }
 
-    public void create(BookRegisterRequest request){
+    public Book create(BookRegisterRequest request){
         Book book = new Book(UUID.randomUUID(), request.availableCopies(), request.title(), request.author());
-        booksRepository.save(book);
+        return booksRepository.save(book);
     }
 
     public void deleteById(UUID id){

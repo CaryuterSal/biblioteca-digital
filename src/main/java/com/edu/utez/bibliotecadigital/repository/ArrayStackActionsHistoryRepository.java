@@ -127,6 +127,47 @@ public class ArrayStackActionsHistoryRepository implements ActionsHistoryReposit
         return activeLoansStack;
     }
 
+    @Override
+    public Optional<LoanStatus> popForUserByAction(UUID userId, TypeAction typeAction) {
+        Stack<LoanStatus> tempPopoff = stackProvider.getObject();
+        LoanStatus result = null;
+
+        while(!history.isEmpty()){
+            LoanStatus top = history.pop();
+            if(top.getUser().getId().equals(userId) && top.getTypeAction().equals(typeAction)){
+                result = top;
+                break;
+            }
+            tempPopoff.push(top);
+        }
+
+        while(!tempPopoff.isEmpty()){
+            history.push(tempPopoff.pop());
+        }
+
+        return Optional.ofNullable(result);
+    }
+
+    @Override
+    public Optional<LoanStatus> popByAction(TypeAction typeAction) {
+        Stack<LoanStatus> tempPopoff = stackProvider.getObject();
+        LoanStatus result = null;
+
+        while(!history.isEmpty()){
+            LoanStatus top = history.pop();
+            if(top.getTypeAction().equals(typeAction)){
+                result = top;
+                break;
+            }
+            tempPopoff.push(top);
+        }
+
+        while(!tempPopoff.isEmpty()){
+            history.push(tempPopoff.pop());
+        }
+
+        return Optional.ofNullable(result);
+    }
 
 
     @Override

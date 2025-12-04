@@ -4,6 +4,7 @@ import com.edu.utez.bibliotecadigital.controller.dto.*;
 import com.edu.utez.bibliotecadigital.infrastructure.datastructures.ArrayStack;
 import com.edu.utez.bibliotecadigital.infrastructure.datastructures.Queue;
 import com.edu.utez.bibliotecadigital.infrastructure.datastructures.Stack;
+import com.edu.utez.bibliotecadigital.infrastructure.exceptions.NotFoundException;
 import com.edu.utez.bibliotecadigital.model.*;
 import com.edu.utez.bibliotecadigital.repository.ActionsHistoryRepository;
 import com.edu.utez.bibliotecadigital.repository.BooksRepository;
@@ -74,7 +75,7 @@ public class BooksLoanService {
         }
     }
 
-    public Optional<LoanStatus> returnLoaned(LoanReturnRequest request){
+    public Optional<LoanResponse> returnLoaned(LoanReturnRequest request){
         User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Book book = booksService.findById(request.bookId());
         Stack<LoanStatus> loans = actionsHistoryRepository.findActiveLoansForUser(currentUser.getId());
@@ -100,34 +101,84 @@ public class BooksLoanService {
                     );
 
                     actionsHistoryRepository.save(newLoan);
+                } else {
 
-                    return Optional.of(returnLoanStatus);
+                    book.incrementStock();
+                    booksRepository.save(book);
                 }
 
-                 book.incrementStock();
-                booksRepository.save(book);
-
-                return Optional.of(returnLoanStatus);
+                return Optional.of(new LoanResponse(
+                        new UserResponse(returnLoanStatus.getUser().getId(), returnLoanStatus.getUser().getUsername()),
+                        returnLoanStatus.getBook(),
+                        returnLoanStatus.getLoanDate(),
+                        returnLoanStatus.getExpectedLoanPeriod().getDays(),
+                        returnLoanStatus.getExpectedReturnDate(),
+                        returnLoanStatus.getActualReturnDate(),
+                        LoanStatusResponse.RETURNED));
             }
         }
 
         return Optional.empty();
     }
 
-    public List<LoanStatus> findLoansForUser(UUID userId){
+    public List<LoanResponse> findLoansForUser(UUID userId){
         boolean isAdmin =  SecurityContextHolder.getContext().getAuthentication().getAuthorities()
                 .stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if(!(isAdmin || currentUser.getId().equals(userId))) throw new AuthorizationDeniedException("Cannot query loans for external users");
 
-        List<LoanStatus> response = new ArrayList<>();
+        List<LoanResponse> response = new ArrayList<>();
         Stack<LoanStatus> loans = actionsHistoryRepository.findActiveLoansForUser(userId);
 
         while(!loans.isEmpty()){
-            response.add(loans.pop());
+            LoanStatus topLoan = loans.pop();
+            response.add(new LoanResponse(
+                    new UserResponse(topLoan.getUser().getId(), topLoan.getUser().getUsername()),
+                    topLoan.getBook(),
+                    topLoan.getLoanDate(),
+                    topLoan.getExpectedLoanPeriod().getDays(),
+                    topLoan.getExpectedReturnDate(),
+                    topLoan.getActualReturnDate(),
+                    LoanStatusResponse.RETURNED));
         }
 
         return response;
+    }
+
+    public List<LoanResponse> findReservationsForBook(UUID bookId){
+        Queue<LoanStatus> pending = pendingLoansRepository.findPendingLoansForBook(bookId);
+        List<LoanResponse> result = new ArrayList<>();
+
+        while (!pending.isEmpty()) {
+            LoanStatus ls = pending.dequeue();
+
+            result.add(new LoanResponse(
+                    new UserResponse(ls.getUser().getId(), ls.getUser().getUsername()),
+                    ls.getBook(),
+                    ls.getLoanDate(),
+                    ls.getExpectedLoanPeriod().getDays(),
+                    null,
+                    ls.getActualReturnDate(),
+                    LoanStatusResponse.PENDING
+            ));
+        }
+
+        return result;
+    }
+
+    public void deleteReservation(UUID bookId, UUID userId){
+        Queue<LoanStatus> pending = pendingLoansRepository.findPendingLoansForBook(bookId);
+
+        while (!pending.isEmpty()) {
+            LoanStatus ls = pending.dequeue();
+            if (ls.getUser().getId().equals(userId)) {
+                pendingLoansRepository.delete(ls);
+                return;
+            }
+        }
+
+        throw new NotFoundException("No reservation found for the provided user/book");
+
     }
 }
