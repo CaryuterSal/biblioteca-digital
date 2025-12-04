@@ -47,6 +47,7 @@ public class BooksLoanService {
             booksRepository.save(book);
 
             return new LoanResponse(
+                    loanStatus.getId(),
                     new UserResponse(loanStatus.getUser().getId(), loanStatus.getUser().getUsername()),
                     loanStatus.getBook(),
                     loanStatus.getLoanDate(),
@@ -65,6 +66,7 @@ public class BooksLoanService {
             book.incrementStock();
             booksRepository.save(book);
             return new LoanResponse(
+                    loanStatus.getId(),
                     new UserResponse(loanStatus.getUser().getId(), loanStatus.getUser().getUsername()),
                     loanStatus.getBook(),
                     loanStatus.getLoanDate(),
@@ -75,19 +77,18 @@ public class BooksLoanService {
         }
     }
 
-    public Optional<LoanResponse> returnLoaned(LoanReturnRequest request){
+    public LoanResponse returnLoaned(UUID loanId){
         User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Book book = booksService.findById(request.bookId());
         Stack<LoanStatus> loans = actionsHistoryRepository.findActiveLoansForUser(currentUser.getId());
 
         while(!loans.isEmpty()){
             LoanStatus topLoan =  loans.pop();
-            if(topLoan.getBook().getId().equals(book.getId())){
+            if(topLoan.getId().equals(loanId)){
 
                 LoanStatus returnLoanStatus = topLoan.returnLoan();
                 actionsHistoryRepository.save(returnLoanStatus);
 
-                Queue<LoanStatus> pending = pendingLoansRepository.findPendingLoansForBook(book.getId());
+                Queue<LoanStatus> pending = pendingLoansRepository.findPendingLoansForBook(topLoan.getBook().getId());
 
                 if (!pending.isEmpty()) {
                     LoanStatus waiting = pending.dequeue();
@@ -96,29 +97,30 @@ public class BooksLoanService {
                     LoanStatus newLoan = LoanStatus.createGranted(
                             UUID.randomUUID(),
                             waiting.getUser(),
-                            book,
+                            topLoan.getBook(),
                             waiting.getExpectedLoanPeriod()
                     );
 
                     actionsHistoryRepository.save(newLoan);
                 } else {
 
-                    book.incrementStock();
-                    booksRepository.save(book);
+                    topLoan.getBook().incrementStock();
+                    booksRepository.save(topLoan.getBook());
                 }
 
-                return Optional.of(new LoanResponse(
+                return new LoanResponse(
+                        returnLoanStatus.getId(),
                         new UserResponse(returnLoanStatus.getUser().getId(), returnLoanStatus.getUser().getUsername()),
                         returnLoanStatus.getBook(),
                         returnLoanStatus.getLoanDate(),
                         returnLoanStatus.getExpectedLoanPeriod().getDays(),
                         returnLoanStatus.getExpectedReturnDate(),
                         returnLoanStatus.getActualReturnDate(),
-                        LoanStatusResponse.RETURNED));
+                        LoanStatusResponse.RETURNED);
             }
         }
 
-        return Optional.empty();
+        throw new NotFoundException(LoanStatus.class, loanId);
     }
 
     public List<LoanResponse> findLoansForUser(UUID userId){
@@ -134,6 +136,7 @@ public class BooksLoanService {
         while(!loans.isEmpty()){
             LoanStatus topLoan = loans.pop();
             response.add(new LoanResponse(
+                    topLoan.getId(),
                     new UserResponse(topLoan.getUser().getId(), topLoan.getUser().getUsername()),
                     topLoan.getBook(),
                     topLoan.getLoanDate(),
@@ -154,6 +157,7 @@ public class BooksLoanService {
             LoanStatus ls = pending.dequeue();
 
             result.add(new LoanResponse(
+                    ls.getId(),
                     new UserResponse(ls.getUser().getId(), ls.getUser().getUsername()),
                     ls.getBook(),
                     ls.getLoanDate(),
@@ -180,5 +184,23 @@ public class BooksLoanService {
 
         throw new NotFoundException("No reservation found for the provided user/book");
 
+    }
+
+    public List<LoanResponse> findAll() {
+        List<LoanResponse> response = new ArrayList<>();
+        Stack<LoanStatus> loans = actionsHistoryRepository.findActiveLoans();
+
+        while(!loans.isEmpty()){
+            LoanStatus topLoan = loans.pop();
+            response.add(new LoanResponse(
+                    topLoan.getId(),
+                    new UserResponse(topLoan.getUser().getId(), topLoan.getUser().getUsername()),
+                    topLoan.getBook(),
+                    topLoan.getLoanDate(),
+                    topLoan.getExpectedLoanPeriod().getDays(),
+                    topLoan.getExpectedReturnDate(),
+                    topLoan.getActualReturnDate(),
+                    LoanStatusResponse.RETURNED));
+        }
     }
 }

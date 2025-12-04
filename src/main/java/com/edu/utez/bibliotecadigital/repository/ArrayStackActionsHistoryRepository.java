@@ -169,6 +169,41 @@ public class ArrayStackActionsHistoryRepository implements ActionsHistoryReposit
         return Optional.ofNullable(result);
     }
 
+    @Override
+    public Stack<LoanStatus> findActiveLoans() {
+        SinglyLinkedList<LoanStatus> activeUserLoans = listProvider.getObject();
+
+        LoanStatus[] buffer = new LoanStatus[history.size()];
+
+        int idx = 0;
+        while (!history.isEmpty()) {
+            buffer[idx++] = history.pop();
+        }
+
+        for(int i = history.size() - 1; i >= 0; i--){
+            history.push(buffer[i]);
+        }
+
+        for (int i = 0; i < idx; i++) {
+            LoanStatus action = buffer[i];
+
+            if (action.getTypeAction() == TypeAction.CREATE_LOAN) {
+                activeUserLoans.addLast(action);
+            }
+
+            if (action.getTypeAction() == TypeAction.RETURN_LOAN) {
+                activeUserLoans.remove(action);
+            }
+        }
+
+        Stack<LoanStatus> activeLoansStack = stackProvider.getObject();
+        for(int i = 0; i < activeUserLoans.size(); i++){
+            activeLoansStack.push(activeUserLoans.get(i));
+        }
+
+        return activeLoansStack;
+    }
+
 
     @Override
     public LoanStatus save(LoanStatus entity) {

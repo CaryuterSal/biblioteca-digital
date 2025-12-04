@@ -18,4 +18,6 @@ public interface ActionsHistoryRepository extends CrudRepository<LoanStatus, UUI
 
     Optional<LoanStatus> popForUserByAction(UUID userId, TypeAction typeAction);
     Optional<LoanStatus> popByAction(TypeAction typeAction);
+
+    Stack<LoanStatus> findActiveLoans();
 }
