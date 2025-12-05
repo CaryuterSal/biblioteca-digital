@@ -31,11 +31,11 @@ public class BooksLoanService {
     private final ActionsHistoryRepository actionsHistoryRepository;
 
 
-    public LoanResponse createLoan(LoanRequest request){
+    public LoanResponse createLoan(LoanRequest request) {
 
         User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Book book = booksService.findById(request.bookId());
-        if(book.getAvailableCopies() <= 0){
+        if (book.getAvailableCopies() <= 0) {
             LoanStatus loanStatus = LoanStatus.createWaiting(
                     UUID.randomUUID(),
                     currentUser,
@@ -77,13 +77,13 @@ public class BooksLoanService {
         }
     }
 
-    public LoanResponse returnLoaned(UUID loanId){
+    public LoanResponse returnLoaned(UUID loanId) {
         User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Stack<LoanStatus> loans = actionsHistoryRepository.findActiveLoansForUser(currentUser.getId());
 
-        while(!loans.isEmpty()){
-            LoanStatus topLoan =  loans.pop();
-            if(topLoan.getId().equals(loanId)){
+        while (!loans.isEmpty()) {
+            LoanStatus topLoan = loans.pop();
+            if (topLoan.getId().equals(loanId)) {
 
                 LoanStatus returnLoanStatus = topLoan.returnLoan();
                 actionsHistoryRepository.save(returnLoanStatus);
@@ -123,17 +123,18 @@ public class BooksLoanService {
         throw new NotFoundException(LoanStatus.class, loanId);
     }
 
-    public List<LoanResponse> findLoansForUser(UUID userId){
-        boolean isAdmin =  SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+    public List<LoanResponse> findLoansForUser(UUID userId) {
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
                 .stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if(!(isAdmin || currentUser.getId().equals(userId))) throw new AuthorizationDeniedException("Cannot query loans for external users");
+        if (!(isAdmin || currentUser.getId().equals(userId)))
+            throw new AuthorizationDeniedException("Cannot query loans for external users");
 
         List<LoanResponse> response = new ArrayList<>();
         Stack<LoanStatus> loans = actionsHistoryRepository.findActiveLoansForUser(userId);
 
-        while(!loans.isEmpty()){
+        while (!loans.isEmpty()) {
             LoanStatus topLoan = loans.pop();
             response.add(new LoanResponse(
                     topLoan.getId(),
@@ -149,7 +150,7 @@ public class BooksLoanService {
         return response;
     }
 
-    public List<LoanResponse> findReservationsForBook(UUID bookId){
+    public List<LoanResponse> findReservationsForBook(UUID bookId) {
         Queue<LoanStatus> pending = pendingLoansRepository.findPendingLoansForBook(bookId);
         List<LoanResponse> result = new ArrayList<>();
 
@@ -171,7 +172,7 @@ public class BooksLoanService {
         return result;
     }
 
-    public void deleteReservation(UUID bookId, UUID userId){
+    public void deleteReservation(UUID bookId, UUID userId) {
         Queue<LoanStatus> pending = pendingLoansRepository.findPendingLoansForBook(bookId);
 
         while (!pending.isEmpty()) {
@@ -190,7 +191,7 @@ public class BooksLoanService {
         List<LoanResponse> response = new ArrayList<>();
         Stack<LoanStatus> loans = actionsHistoryRepository.findActiveLoans();
 
-        while(!loans.isEmpty()){
+        while (!loans.isEmpty()) {
             LoanStatus topLoan = loans.pop();
             response.add(new LoanResponse(
                     topLoan.getId(),
@@ -202,5 +203,6 @@ public class BooksLoanService {
                     topLoan.getActualReturnDate(),
                     LoanStatusResponse.RETURNED));
         }
+        return response;
     }
 }

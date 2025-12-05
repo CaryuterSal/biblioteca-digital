@@ -12,7 +12,7 @@ public class ArrayQueue<T> implements Queue<T> {
     private T[] items;
     private int front, rear, size;
 
-    @Value("pending-loans.queue.capacity")
+    @Value("${pending-loans.queue.capacity}")
     private int capacity;
 
     public ArrayQueue() {

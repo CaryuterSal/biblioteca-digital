@@ -7,6 +7,7 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
 import com.auth0.jwt.interfaces.RSAKeyProvider;
 import com.edu.utez.bibliotecadigital.config.JwtProperties;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +21,12 @@ import java.util.Map;
 public class JwtService {
 
     private final JwtProperties  jwtProperties;
-    private final Algorithm algorithm = Algorithm.HMAC256(jwtProperties.secret());;
+    private Algorithm algorithm;
+
+    @PostConstruct
+    public void init() {
+        algorithm = Algorithm.HMAC256(jwtProperties.secret());
+    }
 
     public String generateToken(String subject) {
 

@@ -23,7 +23,7 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping
+    @PostMapping("/register")
     public ResponseEntity<@NonNull TokenResponse> register(@Valid @RequestBody UserRegisterRequest request) {
         TokenResponse tokenResponse = authService.register(request);
         URI location = MvcUriComponentsBuilder
@@ -35,7 +35,7 @@ public class AuthController {
                 .body(tokenResponse);
     }
 
-    @PostMapping
+    @PostMapping("/login")
     public TokenResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.authenticate(request);
     }

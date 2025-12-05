@@ -11,7 +11,7 @@ public class ArrayStack<T> implements Stack<T> {
 
     private T[] items;
     private int top;
-    @Value("history.stack.capacity")
+    @Value("${history.stack.capacity}")
     private int CAPACITY;
 
     public ArrayStack() {

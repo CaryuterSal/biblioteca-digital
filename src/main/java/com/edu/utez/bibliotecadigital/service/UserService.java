@@ -2,8 +2,10 @@ package com.edu.utez.bibliotecadigital.service;
 
 import com.edu.utez.bibliotecadigital.controller.dto.UserResponse;
 import com.edu.utez.bibliotecadigital.infrastructure.datastructures.SinglyLinkedList;
+import com.edu.utez.bibliotecadigital.infrastructure.exceptions.NotFoundException;
 import com.edu.utez.bibliotecadigital.model.User;
 import com.edu.utez.bibliotecadigital.repository.UsersRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,6 +27,12 @@ import java.util.UUID;
 public class UserService implements UserDetailsService {
 
     private final UsersRepository usersRepository;
+    private final User staticUserAdmin;
+
+    @PostConstruct
+    public void init() {
+        usersRepository.save(staticUserAdmin);
+    }
 
     @Override
     public @NonNull UserDetails loadUserByUsername(@NonNull String username) throws UsernameNotFoundException {
@@ -47,7 +55,7 @@ public class UserService implements UserDetailsService {
         return response;
     }
 
-    public Optional<UserResponse> findUser(UUID id){
+    public UserResponse findUser(UUID id){
         boolean isAdmin =  SecurityContextHolder.getContext().getAuthentication().getAuthorities()
                 .stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
@@ -55,6 +63,7 @@ public class UserService implements UserDetailsService {
         if(!(isAdmin || currentUser.getId().equals(id))) throw new AuthorizationDeniedException("Cannot query loans for external users");
 
         return usersRepository.findById(id)
-                .map(user -> new UserResponse(user.getId(), user.getUsername()));
+                .map(user -> new UserResponse(user.getId(), user.getUsername()))
+                .orElseThrow(() -> new NotFoundException(User.class, id));
     }
 }
