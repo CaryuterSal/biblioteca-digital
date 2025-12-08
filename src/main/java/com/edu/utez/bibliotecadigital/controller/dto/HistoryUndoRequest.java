@@ -7,6 +7,6 @@ import jakarta.validation.constraints.Positive;
 import java.util.Optional;
 
 public record HistoryUndoRequest(
-        @Positive Optional<Integer> steps,
+        Optional<@Positive Integer> steps,
         Optional<TypeAction> action) {
 }

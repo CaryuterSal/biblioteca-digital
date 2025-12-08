@@ -78,12 +78,19 @@ public class SinglyLinkedListBooksRepository implements BooksRepository{
     }
 
     @Override
+    public void clear() {
+        for(int i = 0; i < booksRegistry.size(); i++){
+            booksRegistry.remove(booksRegistry.get(i));
+        }
+    }
+
+    @Override
     public SinglyLinkedList<Book> findByTitle(String title) {
         SinglyLinkedList<Book> found = listProvider.getObject();
 
         for (int i = 0; i < booksRegistry.size(); i++) {
             Book book = booksRegistry.get(i);
-            if (book.getTitle().equalsIgnoreCase(title)) {
+            if (book.getTitle().equalsIgnoreCase(title) && !book.isDeleted()) {
                 found.addLast(book);
             }
         }

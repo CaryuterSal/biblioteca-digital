@@ -4,6 +4,7 @@ import com.edu.utez.bibliotecadigital.controller.dto.LoanResponse;
 import com.edu.utez.bibliotecadigital.controller.dto.UserResponse;
 import com.edu.utez.bibliotecadigital.model.Book;
 import com.edu.utez.bibliotecadigital.service.BooksLoanService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/reservations")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class ReservationsController {
 
     private final BooksLoanService booksLoanService;
@@ -25,7 +27,7 @@ public class ReservationsController {
 
     @DeleteMapping
     public ResponseEntity<?> deletePendingReservations(@RequestParam UUID userId, @RequestParam UUID bookId){
-        booksLoanService.deleteReservation(userId,bookId);
+        booksLoanService.deleteReservation(bookId,userId);
         return ResponseEntity.noContent().build();
     }
 }

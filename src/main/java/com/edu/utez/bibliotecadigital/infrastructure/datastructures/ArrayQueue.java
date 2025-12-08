@@ -1,5 +1,6 @@
 package com.edu.utez.bibliotecadigital.infrastructure.datastructures;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
@@ -15,7 +16,8 @@ public class ArrayQueue<T> implements Queue<T> {
     @Value("${pending-loans.queue.capacity}")
     private int capacity;
 
-    public ArrayQueue() {
+    @PostConstruct
+    public void init() {
         items = (T[]) new Object[capacity];
         front = 0;
         rear = 0;

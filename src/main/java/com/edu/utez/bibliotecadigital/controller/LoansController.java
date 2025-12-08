@@ -4,6 +4,7 @@ import com.edu.utez.bibliotecadigital.controller.dto.LoanRequest;
 import com.edu.utez.bibliotecadigital.controller.dto.LoanResponse;
 import com.edu.utez.bibliotecadigital.controller.dto.LoanStatusResponse;
 import com.edu.utez.bibliotecadigital.service.BooksLoanService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/loans")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class LoansController {
 
     private final BooksLoanService booksLoanService;

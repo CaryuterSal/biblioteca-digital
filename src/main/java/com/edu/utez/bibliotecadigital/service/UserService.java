@@ -59,7 +59,8 @@ public class UserService implements UserDetailsService {
         boolean isAdmin =  SecurityContextHolder.getContext().getAuthentication().getAuthorities()
                 .stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser = usersRepository.findByUsername(((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername())
+                .orElseThrow(() -> new AuthorizationDeniedException("User not found"));
         if(!(isAdmin || currentUser.getId().equals(id))) throw new AuthorizationDeniedException("Cannot query loans for external users");
 
         return usersRepository.findById(id)

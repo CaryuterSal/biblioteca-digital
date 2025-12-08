@@ -2,6 +2,7 @@ package com.edu.utez.bibliotecadigital.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -28,15 +29,26 @@ public class SecurityConfig {
 
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthorizationFilter jwtFilter) {
-        return http.
-            cors(AbstractHttpConfigurer::disable)
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthorizationFilter jwtFilter, CustomAuthenticationEntryPoint entryPoint) {
+        return http
+            .cors(AbstractHttpConfigurer::disable)
+            .csrf(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
-            .authorizeHttpRequests(auth ->
-                            auth.requestMatchers("/auth/**", "/swagger-ui/**","/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs").permitAll()
-                                    .requestMatchers("/**").authenticated()
-                    )
-                .addFilterAfter(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(eh ->
+                    eh.authenticationEntryPoint(entryPoint))
+            .authorizeHttpRequests(auth -> auth
+                    .requestMatchers(
+                            "/auth/**",
+                            "/swagger-ui/**",
+                            "/v3/api-docs/**"
+                    ).permitAll()
+                    .requestMatchers(HttpMethod.POST,"/books").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.PUT, "/books/**").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.PATCH, "/books/**").hasRole("ADMIN")
+                    .requestMatchers("/reservations/**").hasRole("ADMIN")
+                    .anyRequest().authenticated()
+            )
+            .addFilterAfter(jwtFilter, UsernamePasswordAuthenticationFilter.class)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .build();
     }

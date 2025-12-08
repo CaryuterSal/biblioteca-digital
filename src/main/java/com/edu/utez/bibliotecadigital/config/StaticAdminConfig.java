@@ -27,7 +27,7 @@ public class StaticAdminConfig {
         User admin = new User(
                 UUID.fromString("00000000-0000-0000-0000-000000000001"),
                 adminProperties.username(),
-                adminProperties.password(),
+                passwordEncoder.encode(adminProperties.password()),
                 authorities
                 );
 

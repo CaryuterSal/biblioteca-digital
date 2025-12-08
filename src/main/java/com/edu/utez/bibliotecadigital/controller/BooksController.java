@@ -4,6 +4,7 @@ import com.edu.utez.bibliotecadigital.controller.dto.BookRegisterRequest;
 import com.edu.utez.bibliotecadigital.controller.dto.BookStatusUpdateRequest;
 import com.edu.utez.bibliotecadigital.model.Book;
 import com.edu.utez.bibliotecadigital.service.BooksRegistryService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/books")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class BooksController {
 
     private final BooksRegistryService booksRegistryService;

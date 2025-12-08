@@ -6,16 +6,17 @@ import com.edu.utez.bibliotecadigital.controller.dto.HistoryUndoRequest;
 import com.edu.utez.bibliotecadigital.controller.dto.UserResponse;
 import com.edu.utez.bibliotecadigital.infrastructure.datastructures.SinglyLinkedList;
 import com.edu.utez.bibliotecadigital.infrastructure.datastructures.Stack;
-import com.edu.utez.bibliotecadigital.infrastructure.exceptions.NotFoundException;
 import com.edu.utez.bibliotecadigital.model.LoanStatus;
 import com.edu.utez.bibliotecadigital.model.TypeAction;
 import com.edu.utez.bibliotecadigital.model.User;
 import com.edu.utez.bibliotecadigital.repository.ActionsHistoryRepository;
+import com.edu.utez.bibliotecadigital.repository.UsersRepository;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -24,7 +25,10 @@ import java.util.*;
 @RequiredArgsConstructor
 public class HistoryService {
 
+    private final ObjectProvider<@NonNull Stack<LoanStatus>> statusStackProvider;
     private final ActionsHistoryRepository repository;
+    private final UsersRepository usersRepository;
+    private final BooksLoanService booksLoanService;
 
     public List<HistoryResponse> getAllHistory(){
         boolean isAdmin =  SecurityContextHolder.getContext().getAuthentication().getAuthorities()
@@ -67,11 +71,18 @@ public class HistoryService {
         return response;
     }
 
-    public HistoryResponse getHistoryForCurrent(UUID userId){
+    public HistoryResponse getHistoryForCurrent(){
+        User user = usersRepository.findByUsername(((UserDetails)SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername())
+                .orElseThrow(() -> new AuthorizationDeniedException("Cannot query history for external users"));
+        return getHistoryForUser(user.getId());
+    }
+
+    public HistoryResponse getHistoryForUser(UUID userId){
         boolean isAdmin =  SecurityContextHolder.getContext().getAuthentication().getAuthorities()
                 .stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser = usersRepository.findByUsername(String.valueOf(((UserDetails)SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername()))
+                .orElseThrow(() -> new AuthorizationDeniedException("User not found"));
         if(!(isAdmin || currentUser.getId().equals(userId))) throw new AuthorizationDeniedException("Cannot query loans for external users");
 
         List<LoanStatus> result = new ArrayList<>();
@@ -92,7 +103,8 @@ public class HistoryService {
         boolean isAdmin =  SecurityContextHolder.getContext().getAuthentication().getAuthorities()
                 .stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser = usersRepository.findByUsername(String.valueOf(((UserDetails)SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername()))
+                .orElseThrow(() -> new AuthorizationDeniedException("User not found"));
         int steps = request.steps().orElse(1);
         List<LoanStatus> undone = new ArrayList<>();
 
@@ -110,6 +122,7 @@ public class HistoryService {
                 undone.add(removed.get());
             }
         } else {
+            Stack<LoanStatus> unresolvableHistoryItems = statusStackProvider.getObject();
             for (int i = 0; i < steps; i++) {
                 Optional<LoanStatus> removed;
 
@@ -120,7 +133,15 @@ public class HistoryService {
                 }
 
                 if (removed.isEmpty()) break;
-                undone.add(removed.get());
+                boolean success = undoAction(removed.get());
+                if(success){
+                    undone.add(removed.get());
+                } else {
+                    unresolvableHistoryItems.push(removed.get());
+                }
+            }
+            while(!unresolvableHistoryItems.isEmpty()){
+                repository.save(unresolvableHistoryItems.pop());
             }
         }
 
@@ -130,5 +151,14 @@ public class HistoryService {
                     hit.getTypeAction())
                 )
                 .toList();
+    }
+
+
+    private boolean undoAction(LoanStatus status){
+        return switch (status.getTypeAction()) {
+            case CREATE_LOAN -> booksLoanService.undoCreateLoan(status);
+            case RETURN_LOAN -> booksLoanService.undoReturnLoan(status);
+            case ADD_TO_WAITLIST -> booksLoanService.undoAddToWaitlist(status);
+        };
     }
 }

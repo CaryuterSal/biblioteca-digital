@@ -9,9 +9,12 @@ import com.edu.utez.bibliotecadigital.model.*;
 import com.edu.utez.bibliotecadigital.repository.ActionsHistoryRepository;
 import com.edu.utez.bibliotecadigital.repository.BooksRepository;
 import com.edu.utez.bibliotecadigital.repository.PendingLoansRepository;
+import com.edu.utez.bibliotecadigital.repository.UsersRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.time.Period;
@@ -27,13 +30,15 @@ public class BooksLoanService {
     private final BooksRegistryService booksService;
     private final BooksRepository booksRepository;
     private final UserService userService;
+    private final UsersRepository usersRepository;
     private final PendingLoansRepository pendingLoansRepository;
     private final ActionsHistoryRepository actionsHistoryRepository;
 
 
     public LoanResponse createLoan(LoanRequest request) {
 
-        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser = usersRepository.findByUsername(((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername())
+                .orElseThrow(() -> new AuthorizationDeniedException("User not found"));
         Book book = booksService.findById(request.bookId());
         if (book.getAvailableCopies() <= 0) {
             LoanStatus loanStatus = LoanStatus.createWaiting(
@@ -42,9 +47,7 @@ public class BooksLoanService {
                     book,
                     Period.ofDays(request.daysRequesting()));
             loanStatus = pendingLoansRepository.save(loanStatus);
-
-            book.incrementStock();
-            booksRepository.save(book);
+            loanStatus = actionsHistoryRepository.save(loanStatus);
 
             return new LoanResponse(
                     loanStatus.getId(),
@@ -63,7 +66,7 @@ public class BooksLoanService {
                     Period.ofDays(request.daysRequesting())
             );
             loanStatus = actionsHistoryRepository.save(loanStatus);
-            book.incrementStock();
+            book.decrementStock();
             booksRepository.save(book);
             return new LoanResponse(
                     loanStatus.getId(),
@@ -77,8 +80,39 @@ public class BooksLoanService {
         }
     }
 
+    public boolean undoCreateLoan(LoanStatus loan) {
+        Book book = loan.getBook();
+        Queue<LoanStatus> pending = pendingLoansRepository.findPendingLoansForBook(book.getId());
+
+        if (!pending.isEmpty()) {
+            LoanStatus waiting = pending.dequeue();
+            pendingLoansRepository.delete(waiting);
+
+            LoanStatus newLoan = LoanStatus.createGranted(
+                    UUID.randomUUID(),
+                    waiting.getUser(),
+                    book,
+                    waiting.getExpectedLoanPeriod()
+            );
+
+            actionsHistoryRepository.save(newLoan);
+        } else {
+
+            book.incrementStock();
+            booksRepository.save(book);
+
+        }
+        return true;
+    }
+
+    public boolean undoAddToWaitlist(LoanStatus loan) {
+        pendingLoansRepository.delete(loan);
+        return true;
+    }
+
     public LoanResponse returnLoaned(UUID loanId) {
-        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser = usersRepository.findByUsername(String.valueOf(((UserDetails)SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername()))
+                .orElseThrow(() -> new AuthorizationDeniedException("User not found"));
         Stack<LoanStatus> loans = actionsHistoryRepository.findActiveLoansForUser(currentUser.getId());
 
         while (!loans.isEmpty()) {
@@ -123,11 +157,20 @@ public class BooksLoanService {
         throw new NotFoundException(LoanStatus.class, loanId);
     }
 
+    public boolean undoReturnLoan(LoanStatus loan) {
+
+        if(loan.getBook().getAvailableCopies() == 0) return false;
+        loan.getBook().decrementStock();
+        booksRepository.save(loan.getBook());
+        return true;
+    }
+
     public List<LoanResponse> findLoansForUser(UUID userId) {
         boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
                 .stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser = usersRepository.findByUsername(String.valueOf(((UserDetails)SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername()))
+                .orElseThrow(() -> new AuthorizationDeniedException("User not found"));
         if (!(isAdmin || currentUser.getId().equals(userId)))
             throw new AuthorizationDeniedException("Cannot query loans for external users");
 

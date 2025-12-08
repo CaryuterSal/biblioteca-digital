@@ -42,17 +42,7 @@ public class User extends Entity<UUID> implements UserDetails, Serializable {
     }
 
     @Override
-    public boolean isAccountNonExpired() {
-        return false;
-    }
-
-    @Override
     public boolean isAccountNonLocked() {
-        return false;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return false;
+        return enabled;
     }
 }

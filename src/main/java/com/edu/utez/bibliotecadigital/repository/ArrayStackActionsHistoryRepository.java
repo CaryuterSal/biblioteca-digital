@@ -271,4 +271,11 @@ public class ArrayStackActionsHistoryRepository implements ActionsHistoryReposit
             history.push(tempPopoff.pop());
         }
     }
+
+    @Override
+    public void clear() {
+        while(!history.isEmpty()){
+            history.pop();
+        }
+    }
 }

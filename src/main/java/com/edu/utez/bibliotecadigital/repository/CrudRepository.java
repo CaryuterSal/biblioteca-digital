@@ -14,4 +14,6 @@ public interface CrudRepository<T extends Entity<ID>, ID extends Serializable> {
     void delete(T entity);
     void deleteById(ID id);
 
+    void clear();
+
 }

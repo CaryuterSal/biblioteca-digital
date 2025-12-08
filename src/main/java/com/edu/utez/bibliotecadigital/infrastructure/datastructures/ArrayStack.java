@@ -1,5 +1,6 @@
 package com.edu.utez.bibliotecadigital.infrastructure.datastructures;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
@@ -14,7 +15,8 @@ public class ArrayStack<T> implements Stack<T> {
     @Value("${history.stack.capacity}")
     private int CAPACITY;
 
-    public ArrayStack() {
+    @PostConstruct
+    public void init() {
         items = (T[]) new Object[CAPACITY];
         top = 0;
     }

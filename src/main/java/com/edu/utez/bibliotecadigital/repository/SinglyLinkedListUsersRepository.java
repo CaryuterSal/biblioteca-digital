@@ -80,4 +80,11 @@ public class SinglyLinkedListUsersRepository implements UsersRepository{
             }
         }
     }
+
+    @Override
+    public void clear() {
+        for (int i = 0; i < usersRegistry.size(); i++) {
+            usersRegistry.remove(usersRegistry.get(i));
+        }
+    }
 }

@@ -2,6 +2,7 @@ package com.edu.utez.bibliotecadigital.controller;
 
 import com.edu.utez.bibliotecadigital.controller.dto.UserResponse;
 import com.edu.utez.bibliotecadigital.service.UserService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class UsersController {
 
     private final UserService userService;

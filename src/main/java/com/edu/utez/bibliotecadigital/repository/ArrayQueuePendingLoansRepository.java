@@ -161,4 +161,11 @@ public class ArrayQueuePendingLoansRepository implements PendingLoansRepository 
             pendingLoans.enqueue(temp.dequeue());
         }
     }
+
+    @Override
+    public void clear() {
+        while(!pendingLoans.isEmpty()){
+            pendingLoans.dequeue();
+        }
+    }
 }
